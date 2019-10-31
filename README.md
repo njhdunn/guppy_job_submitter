@@ -2,7 +2,8 @@
 
 This tool is intended for use in breaking up a large number of time-consuming basecalling tasks into a set of CPU-only PBS jobs.
 
-```usage: prepare_guppy.py [-h] --input_path INPUT_PATH --save_path SAVE_PATH
+```
+usage: prepare_guppy.py [-h] --input_path INPUT_PATH --save_path SAVE_PATH
                        --stage_path STAGE_PATH [--flowcell FLOWCELL]
                        [--kit KIT] [--config CONFIG] [--nsets NSETS]
                        [--njobs NJOBS] [--ppn PPN] [--pergb PERGB]
@@ -36,12 +37,13 @@ optional arguments:
                         48)
 ```
 
-This script creates a staging directory at stage_path to partition the work between jobs and to store the PBS job scripts. No actual data is stored in the stage_path directory (only references to data files), so you may freely delete it once your calculation is complete, or if you need to re-run this script to change your job parameters.
+This script creates a staging directory at the location specified by `--stage_path` to partition the work between jobs and to store the PBS job scripts. No actual data is stored in this staging directory (only references to data files), so you may freely delete it once your calculation is complete, or if you need to re-run this script to change your job parameters.
 
-For most calculations, you will only need to set input_path, save_path, stage_path, and either config or flowcell and kit. This will generate a PBS script for a single job that distributes the basecalling calculation over a set of nodes so that the job will complete in under 96h (the maximum walltime for Mesabi's default queues.) The jobs are by default set up to complete in approximately 48h, giving a factor of 2 safety margin to allow for fluctuations in runtime.
+For most calculations, you will only need to set `--input_path`, `--save_path`, `--stage_path`, and either `--config` or `--flowcell` and `--kit`. This will generate a PBS script for a single job that distributes the basecalling calculation over a set of nodes so that the job will complete in under 96h (the maximum walltime for Mesabi's default queues.) The jobs are by default set up to complete in approximately 48h, giving a factor of 2 safety margin to allow for fluctuations in runtime.
 
-Example usage:
+### Example usage:
 
+```
 /prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106
 Empirical efficiency: 0.83 h/GB
 1 jobs will be submitted over a total of 5 subsets
@@ -52,11 +54,17 @@ Job 0: 5 nodes, 24 ppn
   - Set 3: 262 files (46.47 GB)
   - Set 4: 262 files (46.51 GB)
 To submit all jobs, run the command 'sh submit.sh'
+```
 
 This will process the data in the directory /scratch.global/dunn0404/guppy_job_dev/fast5 into a directory named output in the current working directory. A staging directory named staging will also be created in the current working directory. The summary output indicates how the work has been partitioned. There is a single job that will process 5 subsets of the data, each subset using its own node. This script generates a single script submit.sh that you can run to submit the listed job(s).
 
-For some datasets, this may generate a job file that requests more nodes than you would like, leading to potentially long queueing times. In these cases, you can specify the njobs flag to break the calculation down into that many jobs. The script will distribute the work between these jobs roughly equally.
+## Advanced Settings
 
+For some datasets, this may generate a job file that requests more nodes than you would like, leading to potentially long queueing times. In these cases, you can specify the `--njobs` flag to break the calculation down into that many jobs. The script will distribute the work between these jobs roughly equally.
+
+### Example usage:
+
+```
 /prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --njobs 5
 Empirical efficiency: 0.83 h/GB
 5 jobs will be submitted over a total of 5 subsets
@@ -71,11 +79,13 @@ Job 3: 1 nodes, 24 ppn
 Job 4: 1 nodes, 24 ppn
   - Set 4: 262 files (46.51 GB)
 To submit all jobs, run the command 'sh submit.sh'
+```
 
-Some datasets may have files with a wide distribution of file sizes, or a small number of files. In these cases, the partitioning strategy employed by this script can provide uneven partitioning of work between jobs. In these cases, you may wish to tune the nsets parameter to manually choose how many sets to break the calculation into. You can combine this with the njobs flag to tune the number of sets per job. Note that the script may select a different number of jobs if your proposed njobs would leave one or more jobs without any work to do.
+Some datasets may have files with a wide distribution of file sizes, or a small number of files. In these cases, the partitioning strategy employed by this script can provide uneven partitioning of work between jobs. In these cases, you may wish to tune the `--nsets` parameter to manually choose how many sets to break the calculation into. You can combine this with the `--njobs` flag to tune the number of sets per job. Note that the script may select a different number of jobs if your proposed njobs would leave one or more jobs without any work to do.
 
-Example usage:
+### Example usage:
 
+```
 /prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10
 Empirical efficiency: 0.83 h/GB
 1 jobs will be submitted over a total of 10 subsets
@@ -91,11 +101,11 @@ Job 0: 10 nodes, 24 ppn
   - Set 8: 130 files (23.10 GB)
   - Set 9: 131 files (23.25 GB)
 To submit all jobs, run the command 'sh submit.sh'
+```
 
-This command would split the input data out into 10 sets, and create a single job script to run the calculation on 10 nodes.
+### Example usage:
 
-Example usage:
-
+```
 ./prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path test/output/data --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10 --njobs 5
 Empirical efficiency: 0.83 h/GB
 5 jobs will be submitted over a total of 10 subsets
@@ -115,6 +125,7 @@ Job 4: 2 nodes, 24 ppn
   - Set 8: 130 files (23.10 GB)
   - Set 9: 131 files (23.25 GB)
 To submit all jobs, run the command 'sh submit.sh'
+```
 
-This script was written with the default queues on Mesabi in mind. If you are using this script elsewhere, you may wish to change the processing efficiency or the target runtime of your jobs. The arguments pergb and walltime provide the ability to set these parameters for your jobs. 
+This script was written with the default queues on Mesabi in mind. If you are using this script elsewhere, you may wish to change the processing efficiency or the target runtime of your jobs. The arguments `--pergb` and `--walltime` provide the ability to set these parameters for your jobs. These values should be based on benchmarking a small basecalling job to determine the performance under the desired environment
 
