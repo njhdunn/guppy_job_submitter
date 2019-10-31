@@ -69,7 +69,7 @@ Job 0: 5 nodes, 24 ppn
 To submit all jobs, run the command 'sh submit.sh'
 ```
 
-This will process the data in the directory /scratch.global/dunn0404/guppy_job_dev/fast5 into a directory named output in the current working directory. A staging directory named staging will also be created in the current working directory. The summary output indicates how the work has been partitioned. There is a single job that will process 5 subsets of the data, each subset using its own node. This script generates a single script submit.sh that you can run to submit the listed job(s).
+This will process the data in the directory `/scratch.global/dunn0404/guppy_job_dev/fast5` into a directory named `output` in the current working directory. A staging directory named `staging` will also be created in the current working directory. The summary output indicates how the work has been partitioned. There is a single job that will process 5 subsets of the data, each subset using its own node. This script generates a single script `submit.sh` that you can run to submit the listed job(s).
 
 ## Advanced Settings
 
