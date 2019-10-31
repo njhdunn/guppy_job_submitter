@@ -37,6 +37,19 @@ optional arguments:
                         48)
 ```
 
+## Installation
+
+This script requires python >= 3.6. If you have that installed, installation of guppy is a matter of downloading the script and adding it to your PATH:
+
+``
+git clone https://github.umn.edu/dunn0404/guppy_job_submitter.git
+
+export PATH=$PATH:$PWD/guppy_job_submitter
+echo "export PATH=\$PATH:${PWD}/guppy_job_submitter" >> ~/.bashrc
+``
+
+## Usage
+
 This script creates a staging directory at the location specified by `--stage_path` to partition the work between jobs and to store the PBS job scripts. No actual data is stored in this staging directory (only references to data files), so you may freely delete it once your calculation is complete, or if you need to re-run this script to change your job parameters.
 
 For most calculations, you will only need to set `--input_path`, `--save_path`, `--stage_path`, and either `--config` or `--flowcell` and `--kit`. This will generate a PBS script for a single job that distributes the basecalling calculation over a set of nodes so that the job will complete in under 96h (the maximum walltime for Mesabi's default queues.) The jobs are by default set up to complete in approximately 48h, giving a factor of 2 safety margin to allow for fluctuations in runtime.
@@ -44,7 +57,7 @@ For most calculations, you will only need to set `--input_path`, `--save_path`, 
 ### Example usage:
 
 ```
-/prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106
+$ prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106
 Empirical efficiency: 0.83 h/GB
 1 jobs will be submitted over a total of 5 subsets
 Job 0: 5 nodes, 24 ppn
@@ -65,7 +78,7 @@ For some datasets, this may generate a job file that requests more nodes than yo
 ### Example usage:
 
 ```
-/prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --njobs 5
+$ prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --njobs 5
 Empirical efficiency: 0.83 h/GB
 5 jobs will be submitted over a total of 5 subsets
 Job 0: 1 nodes, 24 ppn
@@ -86,7 +99,7 @@ Some datasets may have files with a wide distribution of file sizes, or a small 
 ### Example usage:
 
 ```
-/prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10
+$ prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path output --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10
 Empirical efficiency: 0.83 h/GB
 1 jobs will be submitted over a total of 10 subsets
 Job 0: 10 nodes, 24 ppn
@@ -106,7 +119,7 @@ To submit all jobs, run the command 'sh submit.sh'
 ### Example usage:
 
 ```
-./prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path test/output/data --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10 --njobs 5
+$ prepare_guppy.py --input_path /scratch.global/dunn0404/guppy_job_dev/fast5 --save_path test/output/data --stage_path staging --kit SQK-LSK109 --flowcell FLO-MIN106 --nsets 10 --njobs 5
 Empirical efficiency: 0.83 h/GB
 5 jobs will be submitted over a total of 10 subsets
 Job 0: 2 nodes, 24 ppn
