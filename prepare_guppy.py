@@ -105,14 +105,13 @@ else:
 files = []
 sizes = []
 total_size = 0.0
-for filename in glob.iglob(input_path + '**/*', recursive=True):
+for filename in glob.iglob(input_path + '/' + '**/*', recursive=True):
 	files.append(filename)
 
 	file_size = os.path.getsize(filename)
 	sizes.append(file_size)
 	total_size += file_size
 	
-
 # parse out approximately equal file sizes into subsets (possibly tough)
 # - target a default runtime of 48h
 # - put a limit on the number of subsets unless a flag is passed
