@@ -2,7 +2,7 @@
 
 This tool is intended for use in breaking up a large number of time-consuming basecalling tasks into a set of CPU-only PBS jobs.
 
-usage: prepare_guppy.py [-h] --input_path INPUT_PATH --save_path SAVE_PATH
+```usage: prepare_guppy.py [-h] --input_path INPUT_PATH --save_path SAVE_PATH
                        --stage_path STAGE_PATH [--flowcell FLOWCELL]
                        [--kit KIT] [--config CONFIG] [--nsets NSETS]
                        [--njobs NJOBS] [--ppn PPN] [--pergb PERGB]
@@ -34,6 +34,7 @@ optional arguments:
   --walltime WALLTIME   Target real walltime that each job should run. Jobs
                         will request double this time as a buffer. (Default:
                         48)
+```
 
 This script creates a staging directory at stage_path to partition the work between jobs and to store the PBS job scripts. No actual data is stored in the stage_path directory (only references to data files), so you may freely delete it once your calculation is complete, or if you need to re-run this script to change your job parameters.
 
