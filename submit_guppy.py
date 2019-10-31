@@ -47,10 +47,6 @@ def find_partition(sizes, files, N):
 	if sum(final_sizes) != sum(sizes):
 		print("ERROR IN PARTITIONING")
 
-	final_sizes = [total / 1024 / 1024 / 1024 for total in final_sizes]
-	formatted = ["%0.2f" % total for total in final_sizes]	
-	print("Proposed sizes: {0} GB".format(formatted))
-
 	return size_subsets, file_subsets
 
 
@@ -69,9 +65,9 @@ required.add_argument('--stage_path', type=str,
 optional.add_argument('--flowcell', type=str, help='flowcell version')
 optional.add_argument('--kit', type=str, help='sequencing kit version')
 optional.add_argument('--config', type=str, help='config file with guppy parameters')
-optional.add_argument('--nsets', type=int, help='break calculation into this many subsets (default: determine from file sizes)')
 optional.add_argument('--njobs', type=int, 
 	help='break calculation into this many PBS jobs (default: 1)', default=1)
+optional.add_argument('--nsets', type=int, help='break calculation into this many subsets (default: determine from file sizes)')
 optional.add_argument('--ppn', type=int, help='processors per node to request for jobs (Default: 24)', default=24)
 optional.add_argument('--pergb', type=float, help='CPU-hours to process 1 GB of files (default: 20, based on a 24 core Mesabi job )', default=20.0)
 optional.add_argument('--walltime', type=float, help='Target real walltime that each job should run. Jobs will request double this time as a buffer. (Default: 48)', default=48.0)
@@ -140,8 +136,8 @@ else:
 	njobs = args.njobs
 
 print("Empirical efficiency: {0:.2f} h/GB".format(empirical_efficiency))
-print("Empirical max subset size: {0:.2f} GB".format(chunk_size)) 
-print("Will use {0} subsets in {1} job(s)".format(nsets, njobs))
+#print("Empirical max subset size: {0:.2f} GB".format(chunk_size)) 
+#print("Will use {0} subsets in {1} job(s)".format(nsets, njobs))
 
 if max(sizes) > chunk_size_bytes:
 	print("ERROR: Estimated chunk size {0} is smaller than largest file {1}", 
@@ -162,7 +158,7 @@ for ii in range(0, nsets):
 
 
 # create job files matching requested profile
-
+pbs_scripts = []
 
 pbs_preamble = ""
 pbs_preamble += "#!/bin/bash -l\n"
@@ -172,21 +168,38 @@ pbs_preamble += "$PBS -j oe\n"
 pbs_preamble += "$PBS -N {2}\n"
 pbs_preamble += "\n"
 
+guppy_cmd = "guppy_basecaller --cpu_threads_per_caller {0} --input_path {1} --save_path {2} "
+if args.config:
+	guppy_cmd += "--config {3}\n"
+else:
+	guppy_cmd += "--flowcell {3} --kit {4}\n"
+
+
+
 if njobs == nsets:
-	# loop over sets and fill in pbs contents for each
+	# we can just submit a job per set, no GNU parallel needed
+	job_sets = [[ii] for ii in range(0, nsets)]
+
 	for ii in range(0, nsets):
 		subdirname = "{0}/subset{1}".format(stage_path, ii)
 
 		pbs_contents = pbs_preamble.format(1, args.ppn, "guppy_set{0}".format(ii))
 		pbs_contents += "module load guppy\n"
-		pbs_contents += "<insert guppy command here>\n"
-		
-		pbs_file = open("{0}/subset{1}.pbs".format(stage_path, ii), "w")
+
+		if args.config:
+			pbs_contents += guppy_cmd.format(args.ppn, input_path, save_path, config)
+		else:
+			pbs_contents += guppy_cmd.format(args.ppn, input_path, save_path, flowcell, kit)
+		pbs_filename = "{0}/subset{1}.pbs".format(stage_path, ii)
+		pbs_file = open(pbs_filename, "w")
 		pbs_file.write(pbs_contents)
 		pbs_file.close()
 
+		pbs_scripts.append(pbs_filename)
+
 elif njobs < nsets:
-	# we need to create a GNU parallel strategy for this
+	# split up the work using GNU parallel
+	job_sets = []
 	sets_per_job = math.ceil(float(nsets)/njobs)
 
 	set_index = 0
@@ -195,15 +208,20 @@ elif njobs < nsets:
 		proposed_max = sets_per_job + set_index
 		if proposed_max > nsets:
 			max_index = nsets
-			sets_per_job = nsets % sets_per_job
+			sets_this_job = nsets % sets_per_job
 		else:
 			max_index = proposed_max
-			
+			sets_this_job = sets_per_job
 
+		job_sets.append([jj for jj in range(set_index, max_index)])
+	
 		cmd_contents = ""
 
 		for jj in range(set_index, max_index):
-			cmd_contents += "<insert guppy command {0} here>\n".format(jj)
+			if args.config:
+				cmd_contents += guppy_cmd.format(args.ppn, input_path, save_path, config)
+			else:
+				cmd_contents += guppy_cmd.format(args.ppn, input_path, save_path, flowcell, kit)
 
 		cmd_filename = "{0}/job{1}.cmd".format(stage_path, ii) 
 		cmd_file = open(cmd_filename, "w")
@@ -212,7 +230,7 @@ elif njobs < nsets:
  
 		nodelist = "nodelist_job{0}.txt".format(ii)
 
-		pbs_contents = pbs_preamble.format(sets_per_job, args.ppn, 
+		pbs_contents = pbs_preamble.format(sets_this_job, args.ppn, 
 			"guppy_sets{0}.{1}".format(set_index, max_index-1))
 
 		pbs_contents += "module load parallel\n"
@@ -222,12 +240,40 @@ elif njobs < nsets:
 		pbs_contents += "parallel --jobs {0} --sshloginfile {1} --workdir $PWD < {2}\n".format(1, nodelist, cmd_filename)
 
 
-		pbs_file= open("{0}/job{1}.pbs".format(stage_path, ii), "w")
+
+		pbs_filename = "{0}/job{1}.pbs".format(stage_path, ii)
+		pbs_file = open(pbs_filename, "w")
 		pbs_file.write(pbs_contents)
 		pbs_file.close()
 
+		pbs_scripts.append(pbs_filename)
+
 		set_index = max_index
 
+
+for job in job_sets:
+	job_index = job_sets.index(job)
+	if len(job) == 0:
+		job_sets.pop(job_index)
+njobs = len(job_sets)
+
 # report summary statistics
+print("{0} jobs will be submitted over a total of {1} subsets".format(njobs, nsets))
+for ii in range(0, njobs):
+	print("Job {0}: {1} nodes, {2} ppn".format(ii, len(job_sets[ii]), args.ppn))
+
+	upper_bound = job_sets[ii][-1]
+
+	if job_sets[ii][0] == upper_bound:
+		print("  - Set {0}: {1} files ({2:.2f} GB)".format(ii, len(size_subsets[ii]), sum(size_subsets[ii]) / 1024 / 1024 / 1024 ))
+	else:
+		for jj in range(job_sets[ii][0], upper_bound+1):
+			print("  - Set {0}: {1} files ({2:.2f} GB)".format(jj, len(size_subsets[jj]), sum(size_subsets[jj]) / 1024 / 1024 / 1024 ))
+
 
 # produce script to submit jobs
+submit_file = open("submit.sh", "w")
+for script in pbs_scripts:
+	submit_file.write("qsub {0}\n".format(script))
+submit_file.close()
+print("To submit all jobs, run the command \'sh submit.sh\'")
