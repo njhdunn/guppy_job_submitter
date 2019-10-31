@@ -41,12 +41,12 @@ optional arguments:
 
 This script requires python >= 3.6. If you have that installed, installation of guppy is a matter of downloading the script and adding it to your PATH:
 
-``
+```
 git clone https://github.umn.edu/dunn0404/guppy_job_submitter.git
 
 export PATH=$PATH:$PWD/guppy_job_submitter
 echo "export PATH=\$PATH:${PWD}/guppy_job_submitter" >> ~/.bashrc
-``
+```
 
 ## Usage
 
