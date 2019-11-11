@@ -162,9 +162,9 @@ pbs_scripts = []
 pbs_preamble = ""
 pbs_preamble += "#!/bin/bash -l\n"
 pbs_preamble += "#PBS -l nodes={0}:ppn={1},walltime=96:00:00\n"
-pbs_preamble += "$PBS -m abe\n"
-pbs_preamble += "$PBS -j oe\n"
-pbs_preamble += "$PBS -N {2}\n"
+pbs_preamble += "#PBS -m abe\n"
+pbs_preamble += "#PBS -j oe\n"
+pbs_preamble += "#PBS -N {2}\n"
 pbs_preamble += "\n"
 
 guppy_cmd = "guppy_basecaller --cpu_threads_per_caller {0} --input_path {1} --save_path {2} "
