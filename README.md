@@ -4,10 +4,10 @@ This tool is intended for use in breaking up a large number of time-consuming ba
 
 ```
 usage: prepare_guppy.py [-h] --input_path INPUT_PATH --save_path SAVE_PATH
-                       --stage_path STAGE_PATH [--flowcell FLOWCELL]
-                       [--kit KIT] [--config CONFIG] [--nsets NSETS]
-                       [--njobs NJOBS] [--ppn PPN] [--pergb PERGB]
-                       [--walltime WALLTIME]
+                        --stage_path STAGE_PATH [--flowcell FLOWCELL]
+                        [--kit KIT] [--config CONFIG] [--njobs NJOBS]
+                        [--nsets NSETS] [--ppn PPN] [--pergb PERGB]
+                        [--walltime WALLTIME] [--force_split]
 
 Submit batches of guppy jobs to PBS scheduler
 
@@ -32,9 +32,11 @@ optional arguments:
   --ppn PPN             processors per node to request for jobs (Default: 24)
   --pergb PERGB         CPU-hours to process 1 GB of files (default: 20, based
                         on a 24 core Mesabi job )
-  --walltime WALLTIME   Target real walltime that each job should run. Jobs
-                        will request double this time as a buffer. (Default:
-                        48)
+  --walltime WALLTIME   Target real walltime in hours that each job should
+                        run. Jobs will attempt to compose themselves to run in
+                        half this time. (Default: 96)
+  --force_split         Force this script to split the calculation into nsets
+                        jobs. Ignores njobs flag (default: False)
 ```
 
 ## Installation
@@ -52,7 +54,7 @@ echo "export PATH=\$PATH:${PWD}/guppy_job_submitter" >> ~/.bashrc
 
 This script creates a staging directory at the location specified by `--stage_path` to partition the work between jobs and to store the PBS job scripts. No actual data is stored in this staging directory (only references to data files), so you may freely delete it once your calculation is complete, or if you need to re-run this script to change your job parameters.
 
-For most calculations, you will only need to set `--input_path`, `--save_path`, `--stage_path`, and either `--config` or `--flowcell` and `--kit`. This will generate a PBS script for a single job that distributes the basecalling calculation over a set of nodes so that the job will complete in under 96h (the maximum walltime for Mesabi's default queues.) The jobs are by default set up to complete in approximately 48h, giving a factor of 2 safety margin to allow for fluctuations in runtime.
+For most calculations, you will only need to set `--input_path`, `--save_path`, `--stage_path`, and either `--config` or `--flowcell` and `--kit`. This will generate a PBS script for a single job that distributes the basecalling calculation over a set of nodes so that the job will complete in under the specified walltime (defaulting to 96h, the maximum walltime for Mesabi's default queues.) The jobs are set up to complete in approximately half the specified walltime, giving a factor of 2 safety margin to allow for fluctuations in runtime.
 
 ### Example usage:
 
@@ -139,6 +141,11 @@ Job 4: 2 nodes, 24 ppn
   - Set 9: 131 files (23.25 GB)
 To submit all jobs, run the command 'sh submit.sh'
 ```
+
+You can also force this script to split the work into nsets jobs, determined by the `--nsets' flag or automatically by the script.
+
+
+### Portability Notes
 
 This script was written with the default queues on Mesabi in mind. If you are using this script elsewhere, you may wish to change the processing efficiency or the target runtime of your jobs. The arguments `--pergb` and `--walltime` provide the ability to set these parameters for your jobs. These values should be based on benchmarking a small basecalling job to determine the performance under the desired environment
 

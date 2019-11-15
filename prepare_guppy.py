@@ -70,7 +70,8 @@ optional.add_argument('--njobs', type=int,
 optional.add_argument('--nsets', type=int, help='break calculation into this many subsets (default: determine from file sizes)')
 optional.add_argument('--ppn', type=int, help='processors per node to request for jobs (Default: 24)', default=24)
 optional.add_argument('--pergb', type=float, help='CPU-hours to process 1 GB of files (default: 20, based on a 24 core Mesabi job )', default=20.0)
-optional.add_argument('--walltime', type=float, help='Target real walltime that each job should run. Jobs will request double this time as a buffer. (Default: 48)', default=48.0)
+optional.add_argument('--walltime', type=int, help='Target real walltime in hours that each job should run. Jobs will attempt to compose themselves to run in half this time. (Default: 96)', default=96.0)
+optional.add_argument('--force_split', help='Force this script to split the calculation into nsets jobs. Ignores njobs flag (default: False)', action='store_true')
 
 args = parser.parse_args()
 
@@ -120,7 +121,7 @@ sizes = list(sizes)
 files = list(files)
 
 empirical_efficiency = args.pergb / args.ppn 
-chunk_size = args.walltime / empirical_efficiency
+chunk_size = args.walltime / (empirical_efficiency * 2.0)
 chunk_size_bytes = chunk_size * 1024 * 1024 * 1024
 
 if args.nsets:
@@ -131,6 +132,8 @@ else:
 if args.njobs > nsets:
 	njobs = nsets
 	print("WARNING: The number of subsets is less than the number of jobs requested.\n The number of jobs has been set to the number of subsets")
+elif args.force_split:
+	njobs = nsets
 else:
 	njobs = args.njobs
 
@@ -161,13 +164,13 @@ pbs_scripts = []
 
 pbs_preamble = ""
 pbs_preamble += "#!/bin/bash -l\n"
-pbs_preamble += "#PBS -l nodes={0}:ppn={1},walltime=96:00:00\n"
+pbs_preamble += "#PBS -l nodes={0}:ppn={1},walltime={2}:00:00\n"
 pbs_preamble += "#PBS -m abe\n"
 pbs_preamble += "#PBS -j oe\n"
-pbs_preamble += "#PBS -N {2}\n"
+pbs_preamble += "#PBS -N {3}\n"
 pbs_preamble += "\n"
 
-guppy_cmd = "guppy_basecaller --cpu_threads_per_caller {0} --input_path {1} --save_path {2} "
+guppy_cmd = "guppy_basecaller --num_callers 1 --cpu_threads_per_caller {0} --input_path {1} --save_path {2} "
 if args.config:
 	guppy_cmd += "--config {3}\n"
 else:
@@ -182,7 +185,7 @@ if njobs == nsets:
 	for ii in range(0, nsets):
 		subdirname = "{0}/subset{1}".format(stage_path, ii)
 
-		pbs_contents = pbs_preamble.format(1, args.ppn, "guppy_set{0}".format(ii))
+		pbs_contents = pbs_preamble.format(1, args.ppn, int(args.walltime), "guppy_set{0}".format(ii))
 		pbs_contents += "module load guppy\n"
 
 		if args.config:
@@ -229,7 +232,7 @@ elif njobs < nsets:
  
 		nodelist = "nodelist_job{0}.txt".format(ii)
 
-		pbs_contents = pbs_preamble.format(sets_this_job, args.ppn, 
+		pbs_contents = pbs_preamble.format(sets_this_job, args.ppn, int(args.walltime), 
 			"guppy_sets{0}.{1}".format(set_index, max_index-1))
 
 		pbs_contents += "module load parallel\n"
